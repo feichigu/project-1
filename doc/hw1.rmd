@@ -1,0 +1,143 @@
+---
+title: "Emotion patterns in different lyrics genres"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+![](D:/g/C\5243\fall2019-proj1--feichigu-master\figs/emotion.png)
+
+\newline
+\newline
+\newline
+
+We know that lyrics will contain countless emotions, anticipatoin, joy, sadness and so on. But what will they differ in different lyrics genres, and also in different time period? Today, my main theme is to use sentimental analysis available in R package to explore such emotion patterns and get some interesting findings. 
+Basiclly, my analysis will be conducted in three directions:
+1. Compare emotions contained in words in different lyrics genres
+2. Compare emotions contained in top200 most frequent words in different genres
+3. Compare emotions contained in words for different time period of certain genres
+
+```{r,warning=FALSE,message=FALSE}
+## import packages
+library(plyr)
+library(dplyr)
+library(sentimentr)
+library(syuzhet)
+library(tibble)
+library(tm)
+library(tidytext)
+
+##load data and filter data we will not use today
+load('../output/processed_lyrics.RData') 
+data = dt_lyrics
+data = data %>% filter(genre != 'Other' & genre != 'Not Available')
+data = data %>% filter(year>1968)
+## show counts of lyrics genres in every year
+tail(table(data$year,data$genre))
+```
+
+##1)Compare emotions contained in words in different lyrics genres
+```{r}
+out = matrix(NA,10,10)
+for (i in 1:10){
+  fgenre = unique(data$genre)[i]
+  fdata = data %>% filter(genre == fgenre)
+  fsample = sample(fdata$stemmedwords,1000,replace=T)
+  emotions = get_nrc_sentiment(fsample)
+  result = colMeans(emotions)
+  out[i,]  = result
+}
+colnames(out) = colnames(emotions)
+rownames(out) = unique(data$genre)
+out = cbind(out,rep(0,10))
+colnames(out)[11] = "pos_perc"
+out[,11] = (out[,2]+out[,5]+out[,7]+out[,8]+out[,10])/rowSums(out)*100
+print(out)
+heatmap(out[,-11],cexRow =0.55,cexCol = 0.55)
+```
+
+  Let's forcs on the postive percentage column which represent the percentage of positive emotions words of the genres. We can find the two most outstanding genres are Metal and Jazz, which can represent most negative and positive genres. Other genres, although have slight difference in emotions' weight, stay a pos-percentage around 50% relatively. 
+
+##2)Compare emotions contained in top200 most frequent words in different genres
+```{r,warning=F,message=F}
+## First, we seperate the lyrics into words and get top200 most 
+## popular words in every genres
+corpus <- VCorpus(VectorSource(dt_lyrics$stemmedwords))
+word_tibble <- tidy(corpus) %>%
+  select(text) %>%
+  mutate(id = row_number()) %>%
+  unnest_tokens(word, text)
+wordset = matrix(NA,200,1)
+for (i in 1:10){
+  fgenre = unique(data$genre)[i]
+  c = count(filter(word_tibble, 
+                   id %in% which(data$genre == fgenre)), word, sort = TRUE)
+  wordset = cbind(wordset,c[1:200,1])
+}
+wordset = wordset[,-1]
+colnames(wordset) = unique(data$genre)
+head(wordset)
+## Then we conduct similar sentimental analysis on the wordset to see
+## what emotions do they contain
+out2 =  out[,1:10]
+for(i in 1:10){
+  emotions = colSums(get_nrc_sentiment(wordset[,i]))
+  out2[i,] = emotions
+}
+out2 = cbind(out2,rep(0,10))
+colnames(out2)[11] = "pos_perc"
+out2[,11] = (out2[,2]+out2[,5]+out2[,7]+out2[,8]+out2[,10])/rowSums(out2)*100
+heatmap(out2[,-11],cexRow =0.55,cexCol = 0.55)
+```
+  
+  We find Metal still get a low pos-percentage, which fits the above analysis. And we can confirm Metal give more negative emotions than others. 
+The different finding is that we see folk becomes relatively positive genre, which also make sense. 
+However, based on the data we can see most popular words for these genres have a lot in common, so the emotion analysis also gave very similar outcomes. So we can't say this analysis became so successful except it confirms Metal's sadness pattern. 
+
+##3)Compare emotions contained in words for different time period of certain genres
+Because of Metal and Jazz's special patterns, I'll show these two genres' time analysis
+```{r,warning=FALSE}
+## First we seperate data into four blocks
+data_metal_bef = data %>% filter(genre=='Metal' & year<=2006)
+data_metal_aft = data %>% filter(genre=='Metal' & year>2005)
+data_jazz_bef = data %>% filter(genre=='Jazz' & year<=2006)
+data_jazz_aft = data %>% filter(genre=='Jazz' & year>2006)
+## Then we get emotion scores for them and show the outcomes together
+emo_metal_bef = colMeans(get_nrc_sentiment(data_metal_bef$stemmedwords))
+emo_metal_aft = colMeans(get_nrc_sentiment(data_metal_aft$stemmedwords))
+emo_metal = rbind(emo_metal_bef,emo_metal_aft)
+emo_metal = cbind(emo_metal,rep(0,10))
+colnames(emo_metal)[11] = "pos_perc"
+emo_metal[,11] = (emo_metal[,2]+emo_metal[,5]+emo_metal[,7]
+                   +emo_metal[,8]+emo_metal[,10])/rowSums(emo_metal)*100
+
+emo_jazz_bef = colMeans(get_nrc_sentiment(data_jazz_bef$stemmedwords))
+emo_jazz_aft = colMeans(get_nrc_sentiment(data_jazz_aft$stemmedwords))
+emo_jazz = rbind(emo_jazz_bef,emo_jazz_aft)
+emo_jazz = cbind(emo_jazz,rep(0,10))
+colnames(emo_jazz)[11] = "pos_perc"
+emo_jazz[,11] = (emo_jazz[,2]+emo_jazz[,5]+emo_jazz[,7]
+                   +emo_jazz[,8]+emo_jazz[,10])/rowSums(emo_jazz)*100
+print(emo_metal)
+print(emo_jazz)
+```
+Together with outcomes for other genres that I didn't show here, we conclude that there isn't an obvious change in emotions before and after 2006. But there seems to have a slight trend for positive emotions to increase as time passed. 
+
+
+##Summary
+  1. We got an emotion score table presenting emotions contained in samples of different lyrics genres. From percentage of positive words, we can see Metal seems to be most negative and Jazz seems to be most positive.
+
+  2. Because most popular words in these genres have many in common, we can't get an obvious outcome by analyzing these words' emotions. However, it still reinforces Metal's negative emotion and Folk become most positive this turn.
+
+  3. We use 2006 as watershed and Metal,Jazz as samples to explore emotions vs time. We didn't find a clear trend but they show positive emotions increase very slightly by the time.
+
+
+
+
+
