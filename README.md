@@ -18,7 +18,7 @@ Basiclly, my analysis will be conducted in three directions:
 2. Compare emotions contained in top200 most frequent words in different genres
 3. Compare emotions contained in words for different time period of certain genres
 
-### [Project Report](file:///D:/g/C/5243/fall2019-proj1--feichigu-master/doc/hw1.html)
+### [Project Report](doc/hw1.html)
 
 ### [Project Code](doc/hw1.rmd)
 
