@@ -22,11 +22,11 @@ Basiclly, my analysis will be conducted in three directions:
 
 ```
 proj/
-©À©¤©¤ lib/
-©À©¤©¤ data/
-©À©¤©¤ doc/
-©À©¤©¤ figs/
-©¸©¤©¤ output/
+--- lib/
+--- data/
+--- doc/
+--- figs/
+--- output/
 ```
 
 
